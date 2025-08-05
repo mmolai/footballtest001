@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Babylon.js Football Jersey</title>
+    <title>Babylon.js 3D Viewer</title>
     <style>
         html, body {
             overflow: hidden;
@@ -26,111 +26,63 @@
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
 
     <script>
-        // Get the canvas element from the HTML document
         const canvas = document.getElementById("renderCanvas");
-        // Initialize the Babylon.js 3D engine
         const engine = new BABYLON.Engine(canvas, true);
 
-        // --- MAIN SCENE CREATION FUNCTION ---
         const createScene = async function () {
-            // Create a new scene
             const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.15, 1); // A nice dark grey background
 
-            // --- BACKGROUND COLOR ---
-            // Set the scene's background color to red as requested.
-            // new BABYLON.Color4(Red, Green, Blue, Alpha)
-            scene.clearColor = new BABYLON.Color4(1, 0, 0, 1);
-
-            // --- CAMERA ---
-            // Create an ArcRotateCamera. This camera rotates around a target point.
-            // It's perfect for viewing an object from all angles.
-            // "camera" = name, alpha/beta = starting rotation, radius = distance from target, target = point to look at
             const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2, 5, BABYLON.Vector3.Zero(), scene);
-            // Attach camera controls to the canvas, allowing mouse/touch interaction (drag to rotate, scroll to zoom)
             camera.attachControl(canvas, true);
-            // Set some limits to the camera's zoom
             camera.lowerRadiusLimit = 2;
             camera.upperRadiusLimit = 10;
+            camera.wheelPrecision = 50;
 
-
-            // --- LIGHTING (STUDIO ENVIRONMENT) ---
-            // Create a realistic studio lighting environment from a pre-processed file.
-            // This provides both lighting and reflections for PBR materials.
             const envTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
             scene.environmentTexture = envTexture;
-            // Create a skybox to visually see the environment (optional, but good for debugging)
-            // You can comment this out if you only want the solid red background.
-            // scene.createDefaultSkybox(envTexture, true, 1000, 0.5);
 
+            // Using the new model name (after you've renamed it to remove the space)
+            const result = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "BBALL_SS_SSHIRT_3D-2.gltf", scene);
 
-            // --- MODEL LOADING AND SETUP ---
-            // Use the SceneLoader to import the .gltf model file.
-            // We pass the file name and tell it to look in the current directory ("./").
-            const result = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "FB_TOP_3D.gltf", scene);
-
-            // The main parent node of the loaded model is usually the first mesh in the array.
             const rootMesh = result.meshes[0];
-                
-            // --- ORIENTATION AND POSITION ---
-            // Correct the model's orientation. Models often export "laying down".
-            // This rotates it 90 degrees on the X-axis to make it "stand up".
-            rootMesh.rotation.x = -Math.PI / 2;
+            rootMesh.position = new BABYLON.Vector3(0, -0.9, 0); // Center the model
 
-            // Ensure the model is centered at the world origin.
-            rootMesh.position = new BABYLON.Vector3(0, -0.9, 0); // Minor Y adjustment to center it vertically
-
-            // --- SPIN ANIMATION ---
-            // This code runs right before each frame is rendered.
             scene.onBeforeRenderObservable.add(() => {
-                // Get the time elapsed since the last frame in seconds.
                 const deltaTime = engine.getDeltaTime() / 1000; 
-                // Rotate the root mesh on its Y-axis.
-                // You can change the '0.2' to a different value to speed up or slow down the spin.
                 rootMesh.rotation.y += 0.2 * deltaTime;
             });
                 
-            // --- MATERIAL AND TEXTURES ---
-            // Find the actual mesh with the material (sometimes it's a child of the root node).
-            const jerseyMesh = rootMesh.getChildMeshes()[0];
-            const material = jerseyMesh.material;
+            const childMesh = rootMesh.getChildMeshes()[0];
+            const material = childMesh.material;
 
             if (material instanceof BABYLON.PBRMaterial) {
-                // Albedo Texture (Main Color)
-                material.albedoTexture = new BABYLON.Texture("download.png", scene);
-
-                // Normal Map Texture (for bumps and details)
-                material.bumpTexture = new BABYLON.Texture("FB_TOP_3D_MAP_normal@0.5x.png", scene);
-
-                // Ambient Occlusion Texture (for contact shadows)
-                material.ambientTexture = new BABYLON.Texture("FB_TOP_3D_MAP_occlusion@0.5x.png", scene);
-                // Use the red channel of the texture for occlusion, a common setup.
+                // Using the new texture filenames from your latest screenshot
+                material.albedoTexture = new BABYLON.Texture("advanced_template.png", scene);
+                material.bumpTexture = new BABYLON.Texture("SS-Hoodie_MAPS_normal@0.5x.png", scene);
+                material.ambientTexture = new BABYLON.Texture("SS-Hoodie_MAPS_occlusion@0.5x.png", scene);
+                
                 material.useAmbientOcclusionFromMetallicTextureRed = true;
+                material.metallic = 0;
+                material.roughness = 0.8;
 
-                // Detail Map (Fabric Overlay)
-                material.detailMap.texture = new BABYLON.Texture("texture-1.jpg", scene);
+                // Fabric overlay using your new 'texture.jpg' file
+                material.detailMap.texture = new BABYLON.Texture("texture.jpg", scene);
                 material.detailMap.isEnabled = true;
-                // Controls how many times the texture repeats. Higher numbers = smaller pattern.
                 material.detailMap.uScale = 8;
                 material.detailMap.vScale = 8;
-                // Controls the intensity of the fabric effect (your "opacity").
-                // 0 = invisible, 1 = fully visible. Let's start with 0.2 for subtlety.
-                material.detailMap.level = 0.2;
+                material.detailMap.level = 0.15;
             }
 
-            // Return the created scene
             return scene;
         };
 
-        // --- RUN THE SCENE ---
-        // Call the createScene function to set everything up.
         createScene().then(scene => {
-            // Start the continuous render loop, which draws the scene over and over.
             engine.runRenderLoop(function () {
                 scene.render();
             });
         });
 
-        // Watch for browser window resize events and resize the engine accordingly.
         window.addEventListener("resize", function () {
             engine.resize();
         });
